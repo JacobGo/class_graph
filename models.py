@@ -21,6 +21,7 @@ class Department(Base):
     __tablename__ = 'department'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
+    short = Column(String)
 
     # Courses
     courses = relationship("Course", back_populates="department") # 1-many
@@ -44,7 +45,7 @@ prerequisite_association = Table('prerequisite_association', Base.metadata,
 class Course(Base):
     __tablename__ = 'course'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    number = Column(Integer)
+    number = Column(String)
     title = Column(String)
     website = Column(String) # TODO foreign key to websites with availability
     

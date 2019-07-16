@@ -1,13 +1,14 @@
-from models import engine, db_session, Base, Department, Course, Instructor
+from models import engine, db_session, Base, Department, Course, Instructor, Website
 Base.metadata.create_all(bind=engine)
-
-from pyquery import PyQuery as pq
 import urllib
 from bs4 import BeautifulSoup
 import re
 
-# pattern = r"([^\s]+)\s*?([0-9]{3,})\s*?(\(or.*)?"
+pattern = r"([^\s]+)\s*?([0-9]{3,})\s*?"
 # re.findall(pattern, string.split("Prereq")[-1])
+
+def check_available(url):
+  return url != "" # TODO actually check website
 
 def parse_number(course):
   if course.find('a'):
@@ -16,6 +17,13 @@ def parse_number(course):
 def parse_title(course):
   if course.find('a'):
     return course.find('a').text.split(':')[-1].strip()
+
+def parse_website(course):
+  if course.find('a'):
+    url = course.find('a')['href']
+    available = check_available(url) 
+    return url, available
+  return None,None
 
 def parse_instructors(instructors):
   return [i.strip() for i in instructors.text[15:].split(',')]
@@ -33,10 +41,11 @@ def get_or_create(session, model, **kwargs):
       session.commit()
       return instance
 
-def add_course(number, title, instructors, prereqs):
+def add_course(number, title, website, instructors, prereqs):
   compsci = get_or_create(db_session, Department, short="COMPSCI", name="Computer Science")
   course = get_or_create(db_session, Course, number=number, department=compsci)
   course.title = title
+  course.website = website
   for name in instructors:
     instructor = get_or_create(db_session, Instructor, name=name)
     
@@ -46,11 +55,14 @@ def add_course(number, title, instructors, prereqs):
       course.instructors = [instructor]
 
   last_department = None
-  for department, number in prereqs:
-    if department.lower() in ['math', 'compsci', 'cs', 'statistics', 'stats', 'stat'] and last_department:
+  last_department_code = ""
+
+  for department_code, number in prereqs:
+    department_codes = db_session.query(Department).filter(Department.short.contains(last_department_code))
+    if department_code.lower() not in [code.short.lower() for code in department_codes] and last_department:
       department = last_department
     else:
-      department = get_or_create(db_session, Department, short=department)
+      department = get_or_create(db_session, Department, short=department_code)
     last_department = department
     prereq = get_or_create(db_session, Course, number=number, department=department)
     if course.prerequisites:
@@ -60,16 +72,21 @@ def add_course(number, title, instructors, prereqs):
   
 
 soup = BeautifulSoup(open('list.html').read(), "lxml").find('div', {"class": "field-item"})
-pattern = r"([^\s]+)\s*?([0-9]{3,})\s*?"
 for dom_course in soup.findAll('h2'):
   title = parse_title(dom_course)
   number = parse_number(dom_course)
   if not title:
     continue
+
   dom_instructors = dom_course.find_next_sibling("h3")
   instructors = parse_instructors(dom_instructors)
+
   dom_prereqs = dom_instructors.find_next_sibling("p")
   prereqs = parse_prerequisites(dom_prereqs)
 
-  add_course(number, title, instructors, prereqs)
+  url, available = parse_website(dom_course)
+  website = get_or_create(db_session, Website, url=url, available=available)
+
+
+  add_course(number, title, website, instructors, prereqs)
 

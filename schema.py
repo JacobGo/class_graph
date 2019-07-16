@@ -1,8 +1,15 @@
 import graphene
 from graphene import relay
 from graphene_sqlalchemy import SQLAlchemyObjectType, SQLAlchemyConnectionField
-from models import db_session, Department as DepartmentModel, Instructor as InstructorModel, Course as CourseModel
+from models import db_session, Department as DepartmentModel, Instructor as InstructorModel, Course as CourseModel, Website as WebsiteModel
 import re
+
+
+class Website(SQLAlchemyObjectType):
+    class Meta:
+        model = WebsiteModel
+        interfaces = (relay.Node, )
+
 
 class Department(SQLAlchemyObjectType):
     class Meta:
@@ -21,6 +28,10 @@ class Course(SQLAlchemyObjectType):
         interfaces = (relay.Node, )
     instructors = graphene.List(Instructor)
     prerequisites = graphene.List(lambda: Course)
+    course_name = graphene.String()
+
+    def resolve_course_name(self, parent):
+        return f"{self.department.short} {self.number}"
 
 
 class Query(graphene.ObjectType):
@@ -40,7 +51,8 @@ class Query(graphene.ObjectType):
     def resolve_search(self, info, **args):
       q = args.get("q")
       course_query = Course.get_query(info)
-      courses = course_query.filter(CourseModel.title.contains(q) | CourseModel.number.contains(re.findall(r'\d+', q)[0])) 
+      numbers = re.findall(r'\d+', q)
+      courses = course_query.filter(CourseModel.title.contains(q) | CourseModel.number.contains(numbers[0] if len(numbers) > 1 else "______")) # Fix
       return courses
 
     all_instructors= SQLAlchemyConnectionField(Instructor)

@@ -1,8 +1,8 @@
 from models import engine, db_session, Base, Department, Course, Instructor
 Base.metadata.create_all(bind=engine)
 
-compsci = Department(name="Computer Science")
-math = Department(name="Math")
+compsci = Department(name="Computer Science", short="COMPSCI")
+math = Department(name="Math", short="MATH")
 db_session.add(compsci)
 db_session.add(math)
 

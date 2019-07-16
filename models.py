@@ -17,6 +17,13 @@ teaching_association = Table('teaching_association', Base.metadata,
     Column('course_id', Integer, ForeignKey('course.id'))
 )
 
+class Website(Base):
+    __tablename__ = 'website'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    url = Column(String)
+    available = Column(Boolean)
+    
 class Department(Base):
     __tablename__ = 'department'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -26,13 +33,17 @@ class Department(Base):
     # Courses
     courses = relationship("Course", back_populates="department") # 1-many
 
+
+
     # TODO Faculty
 
 class Instructor(Base):
     __tablename__ = 'instructor'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
-    website = Column(String) # TODO foreign key to websites with availability
+
+    website_id = Column(Integer, ForeignKey('website.id'))
+    website = relationship("Website")
 
     # Courses
     courses = relationship("Course", secondary=teaching_association, back_populates="instructors") # many-many
@@ -47,13 +58,15 @@ class Course(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     number = Column(String)
     title = Column(String)
-    website = Column(String) # TODO foreign key to websites with availability
-    
+
+    website_id = Column(Integer, ForeignKey('website.id'))
+    website = relationship("Website")
+
     # Department
     department_id = Column(Integer, ForeignKey('department.id')) # many-1
     department = relationship("Department", back_populates="courses")
 
-    # Instrucotrs
+    # Instructors
     instructors = relationship("Instructor", secondary=teaching_association, back_populates="courses") # many-many
 
     # Prerequisites

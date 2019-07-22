@@ -65,11 +65,13 @@ def add_course(number, title, website, instructors, prereqs):
       department = get_or_create(db_session, Department, short=department_code)
     last_department = department
     prereq = get_or_create(db_session, Course, number=number, department=department)
+    if prereq.id == course.id:
+      print('NO!')
+      return
     if course.prerequisites:
       course.prerequisites.append(prereq) 
     else:
       course.prerequisites = [prereq]
-  
 
 soup = BeautifulSoup(open('list.html').read(), "lxml").find('div', {"class": "field-item"})
 for dom_course in soup.findAll('h2'):
@@ -90,3 +92,6 @@ for dom_course in soup.findAll('h2'):
 
   add_course(number, title, website, instructors, prereqs)
 
+compsci = get_or_create(db_session, Department, short="COMPSCI", name="Computer Science")
+compsci.short = "CS"
+db_session.commit()

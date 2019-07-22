@@ -1,75 +1,25 @@
-<html>
-    <head>
-            <style>
+<!DOCTYPE html>
+<html lang="en">
 
-                svg {
-                background-color: #FFF;
-                cursor: default;
-                -webkit-user-select: none;
-                -moz-user-select: none;
-                -ms-user-select: none;
-                -o-user-select: none;
-                user-select: none;
-                overflow: visible
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Course Graph</title>
+</head>
 
-                }
-
-                svg:not(.active):not(.ctrl) {
-                cursor: crosshair;
-                }
-
-                path.link {
-                fill: none;
-                stroke: #000;
-                stroke-width: 4px;
-                cursor: default;
-                }
-
-                svg:not(.active):not(.ctrl) path.link {
-                cursor: pointer;
-                }
-
-                path.link.selected {
-                stroke-dasharray: 10,2;
-                }
-
-                path.link.dragline {
-                pointer-events: none;
-                }
-
-                path.link.hidden {
-                stroke-width: 0;
-                }
-
-                circle.node {
-                stroke-width: 1.5px;
-                cursor: pointer;
-                }
-
-                circle.node.reflexive {
-                stroke: #000 !important;
-                stroke-width: 2.5px;
-                }
-
-                text {
-                font: 12px sans-serif;
-                pointer-events: none;
-                }
-
-                text.id {
-                text-anchor: middle;
-                font-weight: bold;
-                }
-
-                    
-                </style>
-    </head>
+<body>
+    <div>
+            <button onclick="draw('Q291cnNlOjMy')">CS 220</button>
+            <button onclick="draw('Q291cnNlOjQ4')">CS 453</button>
+            <button onclick="draw('Q291cnNlOjQ1')">CS 383</button>
     
-    <body>
-    
-    
-    </body>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
+    </div>
+       
+        <svg id="root"></svg>
+</body>
+<script src="https://unpkg.com/d3-dag@0.2.3/dist/d3-dag.js"></script>
+<script src="https://d3js.org/d3.v5.js"></script>
+<script src="script.js"></script>
 
-    <script src="script.js"></script>
 </html>

@@ -40,7 +40,6 @@ class Query(graphene.ObjectType):
     course = relay.Node.Field(Course)
     all_courses = SQLAlchemyConnectionField(Course)
 
-
     search = graphene.List(Course, q=graphene.String())  # List field for search results
     #TODO make search robust enough for
           # CS 201

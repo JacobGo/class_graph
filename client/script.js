@@ -1,245 +1,164 @@
-// set up SVG for D3
-const width = 2000;
-const height = 2000;
-const colors = d3.scaleOrdinal(d3.schemeCategory10);
-
-const svg = d3.select('body')
-  .append('svg')
-  .on('contextmenu', () => { d3.event.preventDefault(); })
-  .attr('width', width)
-  .attr('height', height);
-
-// set up initial nodes and links
-//  - nodes are known by 'id', not by index in array.
-//  - reflexive edges are indicated on the node (as a bold black circle).
-//  - links are always source < target; edge directions are set by 'left' and 'right'.
-
-let nodes = []
-
-let lastNodeId = -1;
-let links = [
-  
-];
-
-// init D3 force layout
-const force = d3.forceSimulation()
-  .force('link', d3.forceLink().id((d) => d.id).distance(150))
-  .force('charge', d3.forceManyBody().strength(-500))
-  .force('x', d3.forceX(width / 2))
-  .force('y', d3.forceY(height / 2))
-  .on('tick', tick);
-
-// define arrow markers for graph links
-svg.append('svg:defs').append('svg:marker')
-    .attr('id', 'end-arrow')
-    .attr('viewBox', '0 -5 10 10')
-    .attr('refX', 6)
-    .attr('markerWidth', 3)
-    .attr('markerHeight', 3)
-    .attr('orient', 'auto')
-  .append('svg:path')
-    .attr('d', 'M0,-5L10,0L0,5')
-    .attr('fill', '#000');
-
-svg.append('svg:defs').append('svg:marker')
-    .attr('id', 'start-arrow')
-    .attr('viewBox', '0 -5 10 10')
-    .attr('refX', 4)
-    .attr('markerWidth', 3)
-    .attr('markerHeight', 3)
-    .attr('orient', 'auto')
-  .append('svg:path')
-    .attr('d', 'M10,-5L0,0L10,5')
-    .attr('fill', '#000');
-
-// handles to link and node element groups
-let path = svg.append('svg:g').selectAll('path');
-let circle = svg.append('svg:g').selectAll('g');
-
-// mouse event vars
-let selectedNode = null;
-let selectedLink = null;
-let mousedownLink = null;
-let mousedownNode = null;
-let mouseupNode = null;
-
-function resetMouseVars() {
-  mousedownNode = null;
-  mouseupNode = null;
-  mousedownLink = null;
-}
-
-// update force layout (called automatically each iteration)
-function tick() {
-  // draw directed edges with proper padding from node centers
-  
-  path.attr('d', (d) => {
-    
-
-    const deltaX = d.target.x - d.source.x;
-    const deltaY = d.target.y - d.source.y;
-    const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-    const normX = deltaX / dist;
-    const normY = deltaY / dist;
-    const sourcePadding = d.left ? 17 : 12;
-    const targetPadding = d.right ? 17 : 12;
-    const sourceX = d.source.x + (sourcePadding * normX);
-    const sourceY = d.source.y + (sourcePadding * normY);
-    const targetX = d.target.x - (targetPadding * normX);
-    const targetY = d.target.y - (targetPadding * normY);
-
-    if (!sourceX){return}
-    return `M${sourceX},${sourceY}L${targetX},${targetY}`;
-    
-  });
-
-  circle.attr('transform', (d) => `translate(${d.x},${d.y})`);
-}
-
-// update graph (called when needed)
-function restart() {
-  // path (link) group
-  path = path.data(links);
-
-  // update existing links
-  path.classed('selected', (d) => d === selectedLink)
-    .style('marker-start', (d) => d.left ? 'url(#start-arrow)' : '')
-    .style('marker-end', (d) => d.right ? 'url(#end-arrow)' : '');
-
-  // remove old links
-  path.exit().remove();
-
-  // add new links
-  path = path.enter().append('svg:path')
-    .attr('class', 'link')
-    .classed('selected', (d) => d === selectedLink)
-    .style('marker-start', (d) => d.left ? 'url(#start-arrow)' : '')
-    .style('marker-end', (d) => d.right ? 'url(#end-arrow)' : '')
-    .on('mousedown', (d) => {
-      if (d3.event.ctrlKey) return;
-
-      // select link
-      mousedownLink = d;
-      selectedLink = (mousedownLink === selectedLink) ? null : mousedownLink;
-      selectedNode = null;
-      restart();
-    })
-    .merge(path);
-
-  // circle (node) group
-  // NB: the function arg is crucial here! nodes are known by id, not by index!
-  circle = circle.data(nodes, (d) => d.id);
-
-  // update existing nodes (reflexive & selected visual states)
-  circle.selectAll('circle')
-    .style('fill', (d) => (d === selectedNode) ? d3.rgb(colors(d.id)).brighter().toString() : colors(d.id))
-    .classed('reflexive', (d) => d.reflexive);
-
-  // remove old nodes
-  circle.exit().remove();
-
-  // add new nodes
-  const g = circle.enter().append('svg:g');
-
-  g.append('svg:circle')
-    .attr('class', 'node')
-    .attr('r', 12)
-    .style('fill', (d) => (d === selectedNode) ? d3.rgb(colors(d.id)).brighter().toString() : colors(d.id))
-    .style('stroke', (d) => d3.rgb(colors(d.id)).darker().toString())
-    .classed('reflexive', (d) => d.reflexive)
-
-  // show node IDs
-  g.append('svg:text')
-    .attr('x', 0)
-    .attr('y', 4)
-    .attr('class', 'id')
-    .text((d) => d.courseName);
-
-  circle = g.merge(circle);
-
-  // set the graph in motion
-  force
-    .nodes(nodes)
-    .force('link').links(links);
-
-  force.alphaTarget(0.3).restart();
-}
-
-function spliceLinksForNode(node) {
-  const toSplice = links.filter((l) => l.source === node || l.target === node);
-  for (const l of toSplice) {
-    links.splice(links.indexOf(l), 1);
-  }
-}
-
-
-
-
-
-const query = `
-{ allCourses {
-    edges {
-      node {
-        id
-        courseName
-        department {
-          name
-        }
-        website {
-          url
-          available
-        }
-		prerequisites {
-          id
-          courseName
-        }
-        instructors {
-          name
-        }
-      }	
+const query = (id) => `
+{
+  course(id: "${id}"){
+    id
+    courseName
+    prerequisites {
+      id
     }
   }
 }
 `
-const options = {
+const options = (id) => { return {
     method: "post",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      query: query
+      query: query(id)
     })
   };
+}
 
-let nodes_table = {
+const loadData = async (id) => {
+  const response = await fetch(`http://localhost:5000/graphql`, options(id))
+  const data = await response.json()
+  let buff = data['data']['course']['prerequisites'].slice(0)
+  console.log("buff", buff)
+  const results = [data['data']['course']]
+  while (buff.length > 0) {
+    
+    const courseID = buff.pop()['id']
+    const _response = await fetch(`http://localhost:5000/graphql`, options(courseID))
+    const _data = await _response.json()
+    if (!results.some(r => r['id'] === _data['data']['course']['id'])) {
+      results.push(_data['data']['course'])
+    }
+    buff.push.apply(buff, _data['data']['course']['prerequisites'])
+  }
+  console.log("results", results)
+  return results
 
 }
 
-const assignVars = (data) => {
-    for (let node of data['data']['allCourses']['edges']){
-        course = node['node']
-        course['reflexive'] = false
-        nodes_table[course['id']] = nodes.push(course) - 1
-    }
+const width = 400;
+const height = 300;
+
+const draw = async (id) => {
+  d3.selectAll("svg > *").remove();
+
+  const nodeRadius = 25;
+  const svgNode = document.getElementById('root')
+  svgNode.setAttribute("width", width)
+  svgNode.setAttribute("height", height)
+  svgNode.setAttribute("viewBox", `${-nodeRadius} ${-nodeRadius} ${width + 2 * nodeRadius} ${height + 2 * nodeRadius}`)
+  const svgSelection = d3.select(svgNode);
+  const defs = svgSelection.append('defs'); // For gradients
+  
+  // Use computed layout
+  let data = await loadData(id)
+  const strat = d3.dagStratify()
+  strat.parentIds((d) => d.prerequisites.map(x => x.id))
+  let dag = strat(data);
+
+  const layout = d3.sugiyama()
+    .size([width, height])
+    .layering(d3.layeringSimplex())
+    .decross(d3.decrossOpt())
+    .coord(d3.coordVert())
+  layout(dag)
+  
+
+
+  const steps = dag.size();
+  const interp = d3.interpolateRainbow;
+  const colorMap = {};
+  dag.each((node, i) => {
+    colorMap[node.id] = interp(i / steps);
+  });
+  
+  // How to draw edges
+  const line = d3.line()
+    .curve(d3.curveCatmullRom)
+    .x(d => d.x)
+    .y(d => d.y);
     
-    for (let i = 0; i < nodes.length; i++) {
-        course = nodes[i]
-        for (let prereq of course['prerequisites']) {
-            if (nodes[nodes_table[course['id']]] && nodes[nodes_table[prereq['id']]]) {
-                links.push({
-                    source: nodes[nodes_table[course['id']]],
-                    target: nodes[nodes_table[prereq['id']]],
-                    left: true,
-                    right: false
-                })
-            }
-        }
-    }
-    
-    console.log(links)
-    console.log(nodes)
-    restart()
+  // Plot edges
+  svgSelection.append('g')
+    .selectAll('path')
+    .data(dag.links())
+    .enter()
+    .append('path')
+    .attr('d', ({ data }) => line(data.points))
+    .attr('fill', 'none')
+    .attr('stroke-width', 3)
+    .attr('stroke', ({source, target}) => {
+      const gradId = `${source.id}-${target.id}`;
+      const grad = defs.append('linearGradient')
+        .attr('id', gradId)
+        .attr('gradientUnits', 'userSpaceOnUse')
+        .attr('x1', source.x)
+        .attr('x2', target.x)
+        .attr('y1', source.y)
+        .attr('y2', target.y);
+      grad.append('stop').attr('offset', '0%').attr('stop-color', colorMap[source.id]);
+      grad.append('stop').attr('offset', '100%').attr('stop-color', colorMap[target.id]);
+      return `url(#${gradId})`;
+    });
+  
+  // Select nodes
+  const nodes = svgSelection.append('g')
+    .selectAll('g')
+    .data(dag.descendants())
+    .enter()
+    .append('g')
+    .attr('transform', ({x, y}) => `translate(${x}, ${y})`);
+  
+  // Plot node circles
+  nodes.append('circle')
+    .attr('r', nodeRadius)
+    .attr('fill', n => colorMap[n.id]);
+  
+  const arrow = d3.symbol().type(d3.symbolTriangle).size(nodeRadius * nodeRadius / 10.0);
+  svgSelection.append('g')
+    .selectAll('path')
+    .data(dag.links())
+    .enter()
+    .append('path')
+    .attr('d', arrow)
+    .attr('transform', ({
+      source,
+      target,
+      data
+    }) => {
+      const [end, start] = data.points.reverse();
+      // This sets the arrows the node radius (20) + a little bit (3) away from the node center, on the last line segment of the edge. This means that edges that only span ine level will work perfectly, but if the edge bends, this will be a little off.
+      const dx = start.x - end.x;
+      const dy = start.y - end.y;
+      const scale = nodeRadius * 1.15 / Math.sqrt(dx * dx + dy * dy);
+      // This is the angle of the last line segment
+      const angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
+      console.log(angle, dx, dy);
+      return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
+    })
+    .attr('fill', ({target}) => colorMap[target.id])
+    .attr('stroke', 'white')
+    .attr('stroke-width', 1.5);
+  // Add text to nodes
+  nodes.append('text')
+    .attr('font-weight', 'bold')
+    .attr('font-family', 'sans-serif')
+    .attr('text-anchor', 'middle')
+    .attr('alignment-baseline', 'middle')
+    .attr('textLength', nodeRadius*2)
+    .attr('fill', 'white')
+    .append('tspan')
+    .text(d => d.data.courseName.split(' ')[0])
+    .attr('x', 0)
+    .attr('y', 0)
+    .append('tspan')
+    .text(d => d.data.courseName.split(' ')[1])
+    .attr('x', 0)
+    .attr('dy', 15)
+
 }
-fetch(`http://localhost:5000/graphql`, options)
-    .then(res => res.json())
-    .then(data => assignVars(data))
